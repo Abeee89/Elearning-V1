@@ -1,0 +1,196 @@
+# AGENTS.agent
+## Agent Instruction File — Platform Pembelajaran Interaktif Dasar Kelistrikan & Elektronika
+
+This file defines the concrete, callable functions an AI coding agent (Devin, Cursor, Claude Code, or similar) must implement to build this system. It is derived directly from the ERD and Software Design Document (SDD) already produced for this project. Read those two documents first — this file assumes their schema and does not repeat table definitions in full.
+
+---
+
+## 1. Project Context
+
+- **Stack:** Next.js 14 (App Router), PostgreSQL via Neon, Prisma ORM, Auth.js (NextAuth), Openrouter API for all LLM calls.
+- **Deployment target:** Vercel (free tier) + Neon (free tier).
+- **Two roles:** `student`, `teacher`. Every function below must check `role` before executing, either via middleware or an explicit guard at the top of the function body.
+- **Environment variables required:**
+  - `DATABASE_URL` — Neon Postgres connection string
+  - `NEXTAUTH_SECRET` — session signing secret
+  - `OPENROUTER_API_KEY` — LLM provider key
+  - `OPENROUTER_MODEL` — default free-tier model id (e.g. a Llama or Gemini Flash variant on Openrouter)
+
+---
+
+## 2. Build Order
+
+Implement modules in this sequence — each later module depends on tables/functions from the ones before it:
+
+1. Auth & Users
+2. Class Management
+3. Materials (Chapters/Subchapters)
+4. Simulations
+5. Assessments
+6. Evaluation (AI)
+7. Chatbot (AI)
+8. Progress & Teacher Dashboard
+
+---
+
+## 3. Module: Auth & Users
+
+**Tables used:** `users`
+
+```
+registerUser(input: { email, password, fullName, role }): User
+loginUser(credentials: { email, password }): { token, user }
+getCurrentUser(sessionToken): User | null
+requireRole(session, allowedRoles: Role[]): void  // throws 403 if mismatch
+```
+
+**Notes for the agent:**
+- Hash passwords with bcrypt or argon2 before writing to `password_hash`. Never store plaintext.
+- `requireRole` must be called at the top of every function in Modules 4–8 that is role-restricted (see per-module notes).
+
+---
+
+## 4. Module: Class Management
+
+**Tables used:** `classes`, `class_enrollments`
+
+```
+createClass(teacherId, input: { name, description }): Class          // teacher only
+enrollStudent(classId, studentId): Enrollment                        // teacher only
+removeStudentFromClass(classId, studentId): void                     // teacher only
+getClassStudents(classId): User[]                                    // teacher only, must own class
+getStudentClasses(studentId): Class[]                                // student (self) or teacher
+```
+
+**Notes for the agent:**
+- Before `enrollStudent`, check `class_enrollments` for an existing `(class_id, student_id)` pair to avoid duplicates.
+- `getClassStudents` must verify `classes.teacher_id === session.user.id` before returning data.
+
+---
+
+## 5. Module: Materials (Chapters / Subchapters)
+
+**Tables used:** `chapters`, `subchapters`
+
+```
+getChapters(): Chapter[]                                             // ordered by order_index
+getSubchapters(chapterId): Subchapter[]                               // ordered by order_index
+getSubchapterContent(subchapterId): Subchapter
+createChapter(input: { title, orderIndex }): Chapter                  // teacher/admin only
+createSubchapter(chapterId, input: { title, orderIndex, contentType, contentUrl?, contentBody? }): Subchapter  // teacher/admin only
+```
+
+**Notes for the agent:**
+- `contentType` must be one of `pdf | video | text`. Validate before insert.
+- When `contentType === 'pdf' | 'video'`, `contentUrl` is required; when `'text'`, `contentBody` is required.
+
+---
+
+## 6. Module: Simulations
+
+**Tables used:** `simulations`
+
+```
+getSimulationsBySubchapter(subchapterId): Simulation[]
+getSandboxSimulations(): Simulation[]                                 // where subchapter_id IS NULL
+createSimulation(input: { subchapterId?, type, title, config }): Simulation  // teacher/admin only
+```
+
+**Notes for the agent:**
+- The resistor calculator and rangkaian (circuit) simulators are client-rendered components; `config` (JSONB) stores initial parameters only — computation logic (Ohm's law, series/parallel resistance) lives in frontend code, not the database.
+- The sandbox is simply `type = 'sandbox'` with `subchapter_id = null`.
+
+---
+
+## 7. Module: Assessments
+
+**Tables used:** `assessments`, `questions`, `assessment_attempts`, `attempt_answers`
+
+```
+getAssessmentBySubchapter(subchapterId): Assessment
+getQuestions(assessmentId): Question[]                                // never expose correct_answer to student-facing responses
+startAttempt(studentId, assessmentId): Attempt
+submitAnswer(attemptId, questionId, studentAnswer): AttemptAnswer      // computes is_correct server-side
+completeAttempt(attemptId): { score, completedAt }
+getAttemptHistory(studentId, assessmentId?): Attempt[]
+```
+
+**Notes for the agent:**
+- `submitAnswer` must compare against `questions.correct_answer` **server-side only** — never send the answer key to the client before submission.
+- `completeAttempt` computes `score` as `(correct_answers / total_questions) * 100`, sets `completed_at = now()`, and must trigger `learning_progress` update (Module 8) to `completed` when `score >= assessments.passing_score`.
+- Enforce: an assessment must exist for a subchapter before that subchapter can be marked `completed` — this is the "formative assessment required" business rule.
+
+---
+
+## 8. Module: Evaluation (AI via Openrouter)
+
+**Tables used:** `evaluations`, reads from `assessment_attempts`, `attempt_answers`, `questions`
+
+```
+canGenerateEvaluation(studentId): boolean          // true if >=1 completed assessment_attempts
+generateEvaluation(studentId): Evaluation
+getLatestEvaluation(studentId): Evaluation | null
+getEvaluationHistory(studentId): Evaluation[]
+```
+
+**`generateEvaluation` implementation contract:**
+1. Guard: call `canGenerateEvaluation`; if false, throw/return 403.
+2. Fetch the student's `assessment_attempts` + joined `attempt_answers` + `questions`.
+3. Build an Openrouter prompt containing: subchapter titles attempted, per-question correctness, and scores. Keep this prompt server-side only.
+4. Call Openrouter (`POST https://openrouter.ai/api/v1/chat/completions`) requesting a **strict JSON response** with fields: `strengths`, `weaknesses`, `recommendations`.
+5. Parse and insert a new row into `evaluations` (do not overwrite prior rows — evaluations are historical).
+6. Return the created row.
+
+---
+
+## 9. Module: Chatbot (AI via Openrouter)
+
+**Tables used:** `chat_sessions`, `chat_messages`
+
+```
+startChatSession(userId, subchapterId?): ChatSession
+sendMessage(sessionId, userId, messageText): { userMessage: ChatMessage, aiMessage: ChatMessage }
+getChatHistory(sessionId): ChatMessage[]
+```
+
+**`sendMessage` implementation contract:**
+1. Insert the user's message into `chat_messages` (`sender = 'user'`).
+2. Load prior messages for `sessionId` (ordered by `created_at`) as conversation history.
+3. If `chat_sessions.subchapter_id` is set, prepend a system message with that subchapter's title/content as grounding context.
+4. Call Openrouter with the full message history.
+5. Insert the AI's reply into `chat_messages` (`sender = 'ai'`).
+6. Return both messages to the client.
+
+---
+
+## 10. Module: Progress & Teacher Dashboard
+
+**Tables used:** `learning_progress`, joined with `classes`, `class_enrollments`, `evaluations`
+
+```
+updateLearningProgress(studentId, subchapterId, status): LearningProgress   // status: not_started | in_progress | completed
+getStudentProgress(studentId): { subchapterId, status, completedAt }[]
+getClassProgressOverview(classId): { studentId, fullName, completedCount, totalCount }[]  // teacher only, must own class
+getClassEvaluations(classId): { studentId, fullName, latestEvaluation }[]                  // teacher only, must own class
+```
+
+**Notes for the agent:**
+- `updateLearningProgress` should be called automatically from `completeAttempt` (Module 7), not exposed as a free-standing student-facing action for marking `completed`. Students may only trigger `in_progress` (on opening a subchapter).
+- Both teacher-facing functions must verify `classes.teacher_id === session.user.id` before querying `class_enrollments`.
+
+---
+
+## 11. Cross-Cutting Rules for the Agent
+
+- Every function that touches student-identifiable data must check the caller's role and, where applicable, ownership (a teacher can only see their own classes' students).
+- All Openrouter calls go through a single server-side wrapper module (e.g. `lib/openrouter.ts`) — no direct `fetch` calls to Openrouter scattered across route handlers.
+- Never expose `password_hash`, raw Openrouter prompts, or `questions.correct_answer` in any client-facing response.
+- Use Prisma migrations for every schema change; do not hand-edit the Neon database directly.
+- Write one Next.js API route (or Server Action) per function listed above — do not merge unrelated functions into a single handler.
+
+---
+
+## 12. Reference Documents
+
+- ERD: see the entity-relationship diagram already generated for this project (14 tables).
+- SDD: `dokumentasi_database_platform_pembelajaran.md` — full field definitions, constraints, normalization, and indexing strategy referenced throughout this file.

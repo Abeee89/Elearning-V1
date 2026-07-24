@@ -1,0 +1,188 @@
+# AGENTS-UI.agent
+## Agent Instruction File — UI/UX Layer for the Electrical Engineering E-Learning Platform
+
+This file is the UI/UX counterpart to `AGENTS.agent` (backend functions). It defines the design system, screen inventory, components, interaction states, and navigation an AI coding agent must build for the frontend. Every screen below maps to backend functions already defined in `AGENTS.agent` — this file does not repeat data logic, only what the user sees and does.
+
+---
+
+## 1. Design Direction (read before building anything)
+
+The subject is electrical engineering fundamentals — resistors, circuits, voltage, current. The UI should feel like a well-made technical instrument, not a generic "course platform." Avoid the default AI-generated looks (cream+serif+terracotta, black+neon-green, or newspaper-hairline layouts) — none of them belong to this subject.
+
+**Design tokens (derive all color/type decisions from these):**
+
+| Token | Value | Use |
+|---|---|---|
+| `--bg-base` | `#0E1A24` (deep circuit-board navy) | App background |
+| `--bg-panel` | `#16273544` layered panels | Cards, sidebars |
+| `--trace-teal` | `#4FD1C5` | Primary accent — active states, links, correct answers |
+| `--resistor-amber` | `#E8A33D` | Secondary accent — warnings, in-progress states, hover |
+| `--signal-red` | `#E5484D` | Errors, incorrect answers only — never decorative |
+| `--text-primary` | `#EAF1F5` | Body/headings on dark background |
+| `--text-muted` | `#8CA0AC` | Captions, metadata |
+| `--grid-line` | `#25404D` | Dividers, schematic-style grid backgrounds |
+
+**Typography:**
+- Display/heading face: a geometric grotesk (e.g. "Space Grotesk" or "General Sans") — used for chapter titles, section headers.
+- Body face: a humanist sans (e.g. "Inter") — used for lesson text, chat, buttons.
+- Data/utility face: a monospace (e.g. "IBM Plex Mono" or "JetBrains Mono") — used exclusively for numeric values, units (V, A, Ω, W), and simulation readouts. This is the signature typographic choice: any voltage, current, resistance, or score reads in monospace everywhere in the app, so numbers always feel like instrument readings.
+
+**Signature element:** a thin animated "trace line" (a single glowing teal line, like a PCB trace) that draws itself under the active navbar item and along the border of the currently-open subchapter card. This is the one recurring motif — do not add other decorative animations beyond it.
+
+**Non-negotiable quality floor:** responsive down to 360px width, visible keyboard focus rings on every interactive element (`outline: 2px solid var(--trace-teal)`), `prefers-reduced-motion` disables the trace-line animation and all transitions beyond simple opacity fades.
+
+---
+
+## 2. Global Navigation
+
+**Navbar (persistent, top):**
+- Logo/home
+- `Materi` (Materials)
+- `Simulasi` (Simulations)
+- `Asesmen` (Assessments)
+- `Evaluasi` (Evaluation) — hidden/disabled state until `canGenerateEvaluation(studentId)` returns true; shows a locked-icon tooltip "Selesaikan 1 asesmen untuk membuka fitur ini" when disabled
+- `Chatbot` (floating action button, bottom-right, persistent across all pages — not a navbar tab, since students need it accessible mid-lesson)
+- Role-based item: `Kelas Saya` (student: shows enrolled classes) or `Dashboard Kelas` (teacher: shows owned classes)
+- Account menu (avatar, name, logout)
+
+**Navigation map (Next.js App Router paths):**
+
+```
+/login
+/register
+/dashboard                          -> role-based redirect target after login
+/materi                             -> chapter list
+/materi/[chapterId]                 -> subchapter list within a chapter
+/materi/[chapterId]/[subchapterId]  -> lesson content + embedded simulation + "Mulai Asesmen" CTA
+/simulasi                           -> simulation gallery (grouped: by-topic, sandbox)
+/simulasi/sandbox                   -> free electrical sandbox
+/asesmen/[assessmentId]             -> question flow
+/asesmen/[assessmentId]/hasil       -> attempt result + score
+/evaluasi                           -> latest AI evaluation + history
+/kelas                              -> student: list of enrolled classes
+/dashboard-guru                     -> teacher: class list
+/dashboard-guru/[classId]           -> teacher: student roster, progress table, evaluations
+```
+
+---
+
+## 3. Screen: Auth (`/login`, `/register`)
+
+**Components:** `AuthCard`, `RoleToggle` (Siswa/Guru segmented control), `FormField`, `SubmitButton` with loading spinner state.
+
+**Behavior:**
+- Calls `loginUser` / `registerUser` from the backend agent file.
+- On error, show inline field-level messages (not a generic toast) — e.g. "Email sudah terdaftar" under the email field, not floating at the top.
+- On success, redirect to `/dashboard`, which server-side routes to a student or teacher home based on `role`.
+- Loading state: submit button shows a spinner and disables re-submission; no full-page skeleton needed here since the form is the only content.
+
+---
+
+## 4. Screen: Materials (`/materi`, `/materi/[chapterId]`, `/materi/[chapterId]/[subchapterId]`)
+
+**Components:**
+- `ChapterList` — cards in reading order (`order_index`), each showing chapter title, subchapter count, and a progress ring (from `getStudentProgress`).
+- `SubchapterSidebar` — collapsible on mobile, persistent on desktop; each item shows a status dot (not-started / in-progress / completed, using `--text-muted` / `--resistor-amber` / `--trace-teal`).
+- `LessonViewer` — renders based on `content_type`:
+  - `pdf` → embedded PDF viewer with page controls
+  - `video` → HTML5 video player with playback speed control
+  - `text` → rendered markdown/rich text, monospace styling auto-applied to any inline numeric+unit pattern (e.g. `12V`, `4.7Ω`)
+- `EmbeddedSimulationSlot` — renders any `Simulation` rows tied to this `subchapter_id` inline within the lesson, not as a separate navigation step.
+- `AssessmentCTA` — sticky footer bar: "Materi selesai? Kerjakan Asesmen →", disabled until the student has scrolled/viewed the full content (simple heuristic: scroll-to-bottom or video watched >90%).
+
+**States:**
+- Empty: a chapter with no subchapters yet shows "Materi sedang disiapkan" (teacher/admin view instead shows an "Tambah Sub-bab" button).
+- Loading: skeleton cards matching the final card shape, not a spinner.
+
+---
+
+## 5. Screen: Simulations (`/simulasi`, `/simulasi/sandbox`)
+
+**Components:**
+- `SimulationGallery` — grouped tabs: "Berdasarkan Materi" (pulls from `getSimulationsBySubchapter` per chapter) and "Sandbox Bebas."
+- `ResistorCalculatorWidget` — numeric inputs (monospace font) for resistance/voltage/current, live-computed result panel, color-band visual matching real resistor color codes as a teaching aid.
+- `CircuitBuilderCanvas` — drag-and-drop components (resistor, battery, switch, LED) onto a schematic grid (`--grid-line` background), wires drawn as the teal trace-line style; live readouts (V/A/Ω) in the monospace utility face.
+- `SandboxToolbar` — component palette, clear-canvas action, save-as-image (client-side only, no backend write required for MVP).
+
+**Behavior:**
+- All computation (Ohm's law, series/parallel equivalents) happens client-side in JavaScript; the backend only stores/retrieves `simulations.config` as the initial/saved state, per `AGENTS.agent` Module 6.
+- Errors in circuit logic (e.g. short circuit) show an inline schematic warning (a small red trace-break icon at the fault point), not a modal.
+
+---
+
+## 6. Screen: Assessments (`/asesmen/[assessmentId]`, `/asesmen/[assessmentId]/hasil`)
+
+**Components:**
+- `QuestionCard` — one question at a time, progress indicator ("Soal 3 dari 10") at top, monospace used for any numeric values within the question stem.
+- `AnswerOptions` — radio-style for multiple choice, toggle for true/false, textarea for essay.
+- `AssessmentNavBar` — Previous/Next, with a "Selesai" button only on the last question, calling `completeAttempt`.
+- `ResultSummary` (on `/hasil`) — score in large monospace numerals, pass/fail badge (`--trace-teal` pass / `--signal-red` fail against `passing_score`), and a direct link to `/evaluasi` if this was the student's first completed attempt overall.
+
+**Behavior:**
+- Each answer selection calls `submitAnswer` immediately (autosave per question), so a closed tab doesn't lose progress.
+- No back-navigation to change an already-submitted answer once "Selesai" is pressed — the result screen is final for that attempt; a new attempt starts fresh via `startAttempt`.
+
+---
+
+## 7. Screen: Evaluation (`/evaluasi`)
+
+**Components:**
+- `EvaluationLockedState` — shown when `canGenerateEvaluation` is false: an illustration of a dial/gauge at zero, with the CTA "Kerjakan asesmen pertama Anda untuk membuka evaluasi AI."
+- `EvaluationCard` — three labeled sections rendered from the AI response: `Kekuatan`, `Kelemahan`, `Rekomendasi Materi` (the last one links directly to `/materi/[chapterId]/[subchapterId]` for each recommended subchapter).
+- `EvaluationHistoryList` — collapsed by default, expandable list of past evaluations by `generated_at`.
+- `GenerateEvaluationButton` — visible once eligible; shows a "Menganalisis jawaban Anda..." loading state (this is the one place a longer loading animation is appropriate, since it reflects a real LLM call) while `generateEvaluation` runs.
+
+**Writing tone for AI-generated content display:** Present the AI's evaluation as direct, plain-spoken feedback — no hedging language in the UI chrome around it ("Berikut analisis Anda," not "AI mungkin menyarankan...").
+
+---
+
+## 8. Screen: Chatbot (floating widget, global)
+
+**Components:**
+- `ChatbotFAB` — floating action button, bottom-right, badge indicator if the assistant proactively flagged something (optional, MVP can omit).
+- `ChatPanel` — slide-up panel (mobile) / docked side panel (desktop), header shows current context: "Membahas: [nama sub-bab]" when opened from a lesson page, or "Asisten Umum" otherwise.
+- `MessageBubble` — user messages right-aligned in `--bg-panel`, AI messages left-aligned with a small trace-line accent on the leading edge.
+- `ChatInput` — text field + send button; disable send button while awaiting AI response, show a three-dot typing indicator (reuse the trace-line motif — a short pulsing segment — rather than a generic bouncing-dots animation).
+
+**Behavior:**
+- Opening the chatbot from within a subchapter page auto-calls `startChatSession(userId, subchapterId)`; opening it from anywhere else omits `subchapterId`.
+- `sendMessage` is called on submit; both the user's message and the AI's reply render as soon as each resolves (don't wait for the AI reply to render the user's own message).
+
+---
+
+## 9. Screen: Teacher Dashboard (`/dashboard-guru`, `/dashboard-guru/[classId]`)
+
+**Components:**
+- `ClassList` — cards showing class name, student count, average progress (from `getClassProgressOverview`).
+- `ClassRosterTable` — one row per student: name, overall progress bar, latest evaluation snippet (truncated `strengths`/`weaknesses`), link to full evaluation.
+- `ProgressFilterBar` — filter roster by status (not-started / in-progress / completed) for a chosen subchapter — this is the "easy filtering by class" requirement from the brief.
+- `StudentDetailDrawer` — slide-in panel showing one student's full `learning_progress` and `evaluations` history, opened from a roster row.
+
+**Behavior:**
+- All data in this screen is scoped server-side to classes the logged-in teacher owns (`classes.teacher_id === session.user.id`) — the UI must never render a class-picker that includes classes the teacher doesn't own.
+- Empty state for a class with no enrolled students: "Belum ada siswa di kelas ini" with a CTA to the enrollment flow.
+
+---
+
+## 10. State Management & Data Fetching Conventions
+
+- Use **TanStack Query** for all server data (materials, assessments, evaluations, chat history) — every screen above should have a corresponding `useQuery`/`useMutation` hook named after its backend function (e.g. `useGenerateEvaluation()` wrapping `generateEvaluation`).
+- Use **Zustand** only for ephemeral client-only UI state that must persist across route changes within a session (e.g. chat panel open/closed state, sandbox canvas state) — never for data that already lives in Postgres.
+- Every mutation (submit answer, send chat message, enroll student) follows the same pattern: optimistic UI update where safe (chat messages, answer selection) → real request → rollback with an inline error state on failure.
+
+---
+
+## 11. Accessibility Checklist (apply to every screen above)
+
+- All interactive elements reachable by keyboard in a logical tab order; visible focus ring using `--trace-teal`.
+- Color is never the only signal: status dots and pass/fail badges must pair color with an icon or text label (colorblind-safe).
+- All images/diagrams in materials and simulations require `alt` text; circuit diagrams need a text-equivalent description of the circuit topology for screen readers.
+- Form errors are announced via `aria-live="polite"` regions, not just visual color change.
+- Chat panel and evaluation loading states must have appropriate `aria-busy`/`aria-live` attributes so screen reader users know the AI is generating a response.
+
+---
+
+## 12. Reference Documents
+
+- Backend functions: `AGENTS.agent` — every screen above calls functions defined there; do not invent new backend behavior in the frontend layer.
+- ERD/SDD: `dokumentasi_database_platform_pembelajaran.md` — underlying schema for all data shown in these screens.
