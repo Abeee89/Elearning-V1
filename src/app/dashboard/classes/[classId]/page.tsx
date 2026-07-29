@@ -1,10 +1,12 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getClassProgressOverview } from "@/actions/progress";
+import { getClassById } from "@/actions/classes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookCheck } from "lucide-react";
+import { Users, BookCheck, BookOpen, PenTool, FlaskConical, LineChart } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 // A simple local Progress component since we don't have shadcn progress initialized
 // Let's create a custom styled one to fit the theme
@@ -19,15 +21,83 @@ function CustomProgress({ value }: { value: number }) {
   );
 }
 
-export default async function TeacherClassDashboard(
+export default async function ClassDashboard(
   props: { params: Promise<{ classId: string }> }
 ) {
   const params = await props.params;
   const session = await auth();
   if (!session?.user) redirect("/login");
   
-  if (session.user.role !== "teacher") {
-    redirect("/dashboard");
+  const classData = await getClassById(params.classId);
+  if (!classData) redirect("/dashboard");
+
+  if (session.user.role === "student") {
+    return (
+      <div className="min-h-screen bg-black/95 p-8">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="flex justify-between items-start">
+            <div>
+              <Link href="/dashboard" className="text-trace-teal text-sm hover:underline mb-2 block font-jetbrains-mono">
+                ← Kembali ke Dashboard
+              </Link>
+              <h1 className="text-3xl font-space-grotesk font-bold text-white">Kelas: {classData.name}</h1>
+              <p className="text-gray-400 font-inter mt-2">{classData.description}</p>
+            </div>
+            <LogoutButton />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Link href="/materi" className="block group">
+              <Card className="bg-black/40 border-white/10 hover:border-trace-teal/50 transition-all h-full group-hover:shadow-[0_0_15px_rgba(45,212,191,0.2)]">
+                <CardHeader>
+                  <BookOpen className="w-8 h-8 text-trace-teal mb-4" />
+                  <CardTitle className="text-xl text-white font-space-grotesk">Materi Belajar</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-400 text-sm font-inter">Akses modul pembelajaran, bacaan, dan video interaktif.</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/simulasi" className="block group">
+              <Card className="bg-black/40 border-white/10 hover:border-trace-teal/50 transition-all h-full group-hover:shadow-[0_0_15px_rgba(45,212,191,0.2)]">
+                <CardHeader>
+                  <FlaskConical className="w-8 h-8 text-trace-teal mb-4" />
+                  <CardTitle className="text-xl text-white font-space-grotesk">Simulasi</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-400 text-sm font-inter">Praktikkan teori dengan alat simulasi interaktif.</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/asesmen" className="block group">
+              <Card className="bg-black/40 border-white/10 hover:border-trace-teal/50 transition-all h-full group-hover:shadow-[0_0_15px_rgba(45,212,191,0.2)]">
+                <CardHeader>
+                  <PenTool className="w-8 h-8 text-trace-teal mb-4" />
+                  <CardTitle className="text-xl text-white font-space-grotesk">Asesmen</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-400 text-sm font-inter">Kerjakan kuis dan ujian untuk menguji pemahaman.</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/evaluasi" className="block group">
+              <Card className="bg-black/40 border-white/10 hover:border-trace-teal/50 transition-all h-full group-hover:shadow-[0_0_15px_rgba(45,212,191,0.2)]">
+                <CardHeader>
+                  <LineChart className="w-8 h-8 text-trace-teal mb-4" />
+                  <CardTitle className="text-xl text-white font-space-grotesk">Evaluasi AI</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-400 text-sm font-inter">Dapatkan feedback otomatis dari asisten AI.</p>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const studentProgress = await getClassProgressOverview(params.classId);
@@ -36,7 +106,7 @@ export default async function TeacherClassDashboard(
     <div className="min-h-screen bg-black/95 p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-start">
            <div>
              <Link href="/dashboard" className="text-trace-teal text-sm hover:underline mb-2 block">
                ← Kembali ke Dashboard Utama
@@ -44,9 +114,12 @@ export default async function TeacherClassDashboard(
              <h1 className="text-3xl font-space-grotesk font-bold text-white">Monitoring Kelas</h1>
            </div>
            
-           <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-lg flex items-center">
-              <Users className="w-5 h-5 text-trace-teal mr-2" />
-              <span className="text-white font-jetbrains-mono">{studentProgress.length} Siswa</span>
+           <div className="flex items-center gap-4">
+             <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-lg flex items-center h-10">
+                <Users className="w-5 h-5 text-trace-teal mr-2" />
+                <span className="text-white font-jetbrains-mono">{studentProgress.length} Siswa</span>
+             </div>
+             <LogoutButton />
            </div>
         </div>
 

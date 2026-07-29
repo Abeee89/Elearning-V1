@@ -66,3 +66,8 @@ export async function getStudentClasses() {
 
   return enrolled;
 }
+
+export async function getClassById(classId: string) {
+  const result = await db.select().from(classes).where(eq(classes.id, classId));
+  return result[0];
+}
