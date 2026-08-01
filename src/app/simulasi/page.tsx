@@ -19,7 +19,12 @@ const colorMap: Record<string, { text: string; bg: string; border: string; glow:
   pink: { text: "text-pink-400", bg: "bg-pink-500/10", border: "border-pink-500/20", glow: "hover:shadow-[0_0_20px_rgba(236,72,153,0.15)]" },
 };
 
-export default function SimulasiHubPage() {
+export default async function SimulasiHubPage(
+  props: { searchParams: Promise<{ classId?: string }> }
+) {
+  const searchParams = await props.searchParams;
+  const classId = searchParams.classId;
+
   return (
     <div className="flex flex-col">
       <div className="mb-10">
@@ -42,7 +47,7 @@ export default function SimulasiHubPage() {
           return (
             <Link
               key={mod.id}
-              href={`/simulasi/${mod.id}`}
+              href={`/simulasi/${mod.id}${classId ? `?classId=${classId}` : ""}`}
               className={`block group bg-white/5 border border-white/10 rounded-xl p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/20 ${c.glow}`}
             >
               <div className={`w-12 h-12 rounded-xl mb-4 flex items-center justify-center ${c.bg} ${c.text} border ${c.border}`}>

@@ -7,10 +7,13 @@ import { notFound } from "next/navigation";
 
 export default async function SubchapterPage(
   props: {
-    params: Promise<{ chapterId: string; subchapterId: string }>
+    params: Promise<{ chapterId: string; subchapterId: string }>;
+    searchParams: Promise<{ classId?: string }>;
   }
 ) {
   const params = await props.params;
+  const searchParams = await props.searchParams;
+  const classId = searchParams.classId;
   const subchapter = await getSubchapterById(params.subchapterId);
   
   if (!subchapter || subchapter.chapterId !== params.chapterId) {
@@ -34,7 +37,7 @@ export default async function SubchapterPage(
     <div className="container mx-auto py-8 px-4 max-w-5xl">
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/materi" className="text-trace-teal hover:text-white flex items-center text-sm mb-4 transition-colors w-max">
+          <Link href={classId ? `/materi?classId=${classId}` : "/materi"} className="text-trace-teal hover:text-white flex items-center text-sm mb-4 transition-colors w-max">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Kembali ke Daftar Materi
           </Link>
@@ -54,7 +57,7 @@ export default async function SubchapterPage(
       <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
         {prevSub ? (
           <Link 
-            href={`/materi/${currentChapter?.id}/${prevSub.id}`}
+            href={`/materi/${currentChapter?.id}/${prevSub.id}${classId ? `?classId=${classId}` : ""}`}
             className={buttonVariants({ variant: "outline", className: "bg-black/50 border-white/10 text-white hover:bg-white/10 w-full sm:w-auto" })}
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
@@ -64,7 +67,7 @@ export default async function SubchapterPage(
 
         {nextSub && (
           <Link 
-            href={`/materi/${currentChapter?.id}/${nextSub.id}`}
+            href={`/materi/${currentChapter?.id}/${nextSub.id}${classId ? `?classId=${classId}` : ""}`}
             className={buttonVariants({ className: "bg-trace-teal text-black hover:bg-trace-teal/80 w-full sm:w-auto" })}
           >
             <span className="truncate max-w-[200px]">Selanjutnya: {nextSub.title}</span>

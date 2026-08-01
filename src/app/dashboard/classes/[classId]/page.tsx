@@ -47,7 +47,7 @@ export default async function ClassDashboard(
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Link href="/materi" className="block group">
+            <Link href={`/materi?classId=${params.classId}`} className="block group">
               <Card className="bg-black/40 border-white/10 hover:border-trace-teal/50 transition-all h-full group-hover:shadow-[0_0_15px_rgba(45,212,191,0.2)]">
                 <CardHeader>
                   <BookOpen className="w-8 h-8 text-trace-teal mb-4" />
@@ -59,7 +59,7 @@ export default async function ClassDashboard(
               </Card>
             </Link>
 
-            <Link href="/simulasi" className="block group">
+            <Link href={`/simulasi?classId=${params.classId}`} className="block group">
               <Card className="bg-black/40 border-white/10 hover:border-trace-teal/50 transition-all h-full group-hover:shadow-[0_0_15px_rgba(45,212,191,0.2)]">
                 <CardHeader>
                   <FlaskConical className="w-8 h-8 text-trace-teal mb-4" />
@@ -71,7 +71,7 @@ export default async function ClassDashboard(
               </Card>
             </Link>
 
-            <Link href="/asesmen" className="block group">
+            <Link href={`/asesmen?classId=${params.classId}`} className="block group">
               <Card className="bg-black/40 border-white/10 hover:border-trace-teal/50 transition-all h-full group-hover:shadow-[0_0_15px_rgba(45,212,191,0.2)]">
                 <CardHeader>
                   <PenTool className="w-8 h-8 text-trace-teal mb-4" />
@@ -83,7 +83,7 @@ export default async function ClassDashboard(
               </Card>
             </Link>
 
-            <Link href="/evaluasi" className="block group">
+            <Link href={`/evaluasi?classId=${params.classId}`} className="block group">
               <Card className="bg-black/40 border-white/10 hover:border-trace-teal/50 transition-all h-full group-hover:shadow-[0_0_15px_rgba(45,212,191,0.2)]">
                 <CardHeader>
                   <LineChart className="w-8 h-8 text-trace-teal mb-4" />

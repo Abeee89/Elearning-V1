@@ -5,9 +5,14 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export default async function AssessmentDetailPage(
-  props: { params: Promise<{ id: string }> }
+  props: { 
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ classId?: string }>;
+  }
 ) {
   const params = await props.params;
+  const searchParams = await props.searchParams;
+  const classId = searchParams.classId;
   
   try {
     const assessment = await getAssessmentWithQuestions(params.id);
@@ -15,7 +20,7 @@ export default async function AssessmentDetailPage(
     return (
       <div className="container mx-auto py-8 px-4 max-w-4xl">
         <div className="mb-4">
-          <Link href="/asesmen" className="text-trace-teal hover:text-white flex items-center text-sm w-max transition-colors">
+          <Link href={classId ? `/asesmen?classId=${classId}` : "/asesmen"} className="text-trace-teal hover:text-white flex items-center text-sm w-max transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Kembali ke Daftar Asesmen
           </Link>
@@ -28,7 +33,7 @@ export default async function AssessmentDetailPage(
           </h1>
         </div>
         
-        <AssessmentRunner assessment={assessment} />
+        <AssessmentRunner assessment={assessment} classId={classId} />
       </div>
     );
   } catch (error) {

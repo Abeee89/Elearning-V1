@@ -1,9 +1,13 @@
 import { getMaterialTree } from "@/actions/materials";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { BookOpen, FileText, Video, PlayCircle } from "lucide-react";
+import { BookOpen, FileText, Video, PlayCircle, ArrowLeft } from "lucide-react";
 
-export default async function MateriPage() {
+export default async function MateriPage(
+  props: { searchParams: Promise<{ classId?: string }> }
+) {
+  const searchParams = await props.searchParams;
+  const classId = searchParams.classId;
   const materialTree = await getMaterialTree();
 
   const getIcon = (type: string) => {
@@ -16,6 +20,16 @@ export default async function MateriPage() {
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-4xl">
+      <div className="mb-6">
+        <Link 
+          href={classId ? `/dashboard/classes/${classId}` : "/dashboard"} 
+          className="text-trace-teal hover:text-white flex items-center text-sm w-max transition-colors font-jetbrains-mono"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Kembali ke {classId ? "Kelas" : "Dashboard"}
+        </Link>
+      </div>
+
       <div className="flex items-center gap-3 mb-8">
         <div className="h-10 w-1 bg-trace-teal rounded-full"></div>
         <h1 className="text-4xl font-bold font-space-grotesk tracking-tight text-white">
@@ -37,7 +51,7 @@ export default async function MateriPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-0 md:ml-12 relative z-10">
               {chapter.subchapters.map((sub) => (
-                <Link key={sub.id} href={`/materi/${chapter.id}/${sub.id}`}>
+                <Link key={sub.id} href={`/materi/${chapter.id}/${sub.id}${classId ? `?classId=${classId}` : ""}`}>
                   <Card className="hover:border-trace-teal/50 hover:bg-trace-teal/5 transition-all cursor-pointer h-full border-white/10 bg-black/40 backdrop-blur-sm group">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg font-space-grotesk text-white/90 group-hover:text-trace-teal transition-colors line-clamp-2">

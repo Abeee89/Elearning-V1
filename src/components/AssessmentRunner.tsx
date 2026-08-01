@@ -21,7 +21,7 @@ interface AssessmentData {
   questions: Question[];
 }
 
-export function AssessmentRunner({ assessment }: { assessment: AssessmentData }) {
+export function AssessmentRunner({ assessment, classId }: { assessment: AssessmentData; classId?: string }) {
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,14 +102,14 @@ export function AssessmentRunner({ assessment }: { assessment: AssessmentData })
           
           <div className="flex justify-center gap-4 mt-6">
              <Link 
-                href="/asesmen"
+                href={classId ? `/asesmen?classId=${classId}` : "/asesmen"}
                 className={buttonVariants({ variant: "outline", className: "border-trace-teal text-trace-teal" })}
              >
                 Kembali ke Daftar
              </Link>
              {result.passed && (
                <Link 
-                  href="/evaluasi"
+                  href={classId ? `/evaluasi?classId=${classId}` : "/evaluasi"}
                   className={buttonVariants({ className: "bg-trace-teal text-black hover:bg-trace-teal/90" })}
                >
                  Lihat Evaluasi AI

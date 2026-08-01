@@ -1,14 +1,28 @@
 import { getAssessments } from "@/actions/assessments";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
-import { ClipboardList, ChevronRight } from "lucide-react";
+import { ClipboardList, ChevronRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default async function AsesmenPage() {
+export default async function AsesmenPage(
+  props: { searchParams: Promise<{ classId?: string }> }
+) {
+  const searchParams = await props.searchParams;
+  const classId = searchParams.classId;
   const assessments = await getAssessments();
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-4xl">
+      <div className="mb-6">
+        <Link 
+          href={classId ? `/dashboard/classes/${classId}` : "/dashboard"} 
+          className="text-trace-teal hover:text-white flex items-center text-sm w-max transition-colors font-jetbrains-mono"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Kembali ke {classId ? "Kelas" : "Dashboard"}
+        </Link>
+      </div>
+
       <div className="flex items-center gap-3 mb-8">
         <div className="h-10 w-1 bg-trace-teal rounded-full"></div>
         <h1 className="text-4xl font-bold font-space-grotesk tracking-tight text-white">
@@ -39,7 +53,7 @@ export default async function AsesmenPage() {
                 <div className="text-sm font-jetbrains-mono text-gray-500">
                   Passing Score: <span className="text-white">{assessment.passingScore}</span>
                 </div>
-                <Link href={`/asesmen/${assessment.id}`}>
+                <Link href={`/asesmen/${assessment.id}${classId ? `?classId=${classId}` : ""}`}>
                   <Button size="sm" className="bg-trace-teal text-black hover:bg-trace-teal/80">
                     Mulai Kerjakan
                     <ChevronRight className="w-4 h-4 ml-1" />
