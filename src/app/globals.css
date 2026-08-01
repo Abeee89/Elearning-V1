@@ -137,3 +137,31 @@
     @apply font-sans;
   }
 }
+
+/* ─── Simulation Keyframe Animations ─── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@keyframes successPulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(52, 211, 153, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(52, 211, 153, 0.6); }
+}
+
+@keyframes dimGlow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes lampPop {
+  0% { filter: brightness(3); }
+  50% { filter: brightness(0.5); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes overheat {
+  0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.7); }
+}
