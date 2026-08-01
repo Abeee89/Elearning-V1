@@ -1,6 +1,7 @@
 "use client";
 
-import { FileText, Video, BookOpen, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { FileText, Video, BookOpen, ExternalLink, Download } from "lucide-react";
 import { Button, buttonVariants } from "./ui/button";
 
 interface Subchapter {
@@ -12,6 +13,7 @@ interface Subchapter {
 }
 
 export function LessonViewer({ subchapter }: { subchapter: Subchapter }) {
+  const [showPreview, setShowPreview] = useState(false);
   if (subchapter.contentType === "video") {
     return (
       <div className="space-y-4">
@@ -42,24 +44,56 @@ export function LessonViewer({ subchapter }: { subchapter: Subchapter }) {
 
   if (subchapter.contentType === "pdf") {
     return (
-      <div className="space-y-4">
-        <div className="h-[600px] bg-black/50 rounded-lg overflow-hidden border border-white/10 relative shadow-lg flex flex-col items-center justify-center">
-          {subchapter.contentUrl ? (
-            <iframe src={subchapter.contentUrl} className="w-full h-full border-none"></iframe>
-          ) : (
-            <div className="text-gray-500 flex flex-col items-center gap-2">
-              <FileText className="w-12 h-12 opacity-20" />
-              <p>Dokumen PDF tidak tersedia</p>
+      <div className="space-y-6">
+        {subchapter.contentBody && (
+          <div className="prose prose-invert max-w-none p-6 bg-white/5 rounded-lg border border-white/10 font-inter shadow-md">
+            <h3 className="text-xl font-bold mb-4 font-space-grotesk text-white">Penjelasan Singkat</h3>
+            <div dangerouslySetInnerHTML={{ __html: subchapter.contentBody }} />
+          </div>
+        )}
+
+        {showPreview ? (
+          <div className="h-[600px] bg-black/50 rounded-lg overflow-hidden border border-white/10 relative shadow-lg flex flex-col items-center justify-center">
+            {subchapter.contentUrl ? (
+              <iframe src={subchapter.contentUrl} className="w-full h-full border-none"></iframe>
+            ) : (
+              <div className="text-gray-500 flex flex-col items-center gap-2">
+                <FileText className="w-12 h-12 opacity-20" />
+                <p>Dokumen PDF tidak tersedia</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="p-8 bg-white/5 border border-white/10 rounded-lg text-center flex flex-col items-center justify-center gap-4">
+            <FileText className="w-16 h-16 text-trace-teal opacity-60" />
+            <div>
+              <h4 className="text-white font-bold font-space-grotesk text-lg">{subchapter.title}</h4>
+              <p className="text-gray-400 text-sm mt-1 font-inter">Dokumen PDF Materi Pembelajaran</p>
             </div>
-          )}
-        </div>
+            <Button 
+              onClick={() => setShowPreview(true)}
+              className="bg-trace-teal text-black hover:bg-trace-teal/80 font-bold"
+            >
+              Tampilkan Pratinjau PDF
+            </Button>
+          </div>
+        )}
+        
         {subchapter.contentUrl && (
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end gap-3 mt-4">
+             <a 
+               href={subchapter.contentUrl} 
+               download
+               className={buttonVariants({ variant: "outline", className: "border-trace-teal text-trace-teal hover:bg-trace-teal hover:text-black" })}
+             >
+                <Download className="w-4 h-4 mr-2" />
+                Unduh PDF
+             </a>
              <a 
                href={subchapter.contentUrl} 
                target="_blank" 
                rel="noreferrer"
-               className={buttonVariants({ variant: "outline", className: "border-trace-teal text-trace-teal hover:bg-trace-teal hover:text-black" })}
+               className={buttonVariants({ variant: "outline", className: "border-white/20 text-white hover:bg-white/10" })}
              >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Buka di Tab Baru
