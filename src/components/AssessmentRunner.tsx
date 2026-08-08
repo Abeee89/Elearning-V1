@@ -12,6 +12,7 @@ interface Question {
   questionText: string;
   questionType: string;
   options: any;
+  imageUrl?: string | null;
 }
 
 interface AssessmentData {
@@ -149,9 +150,21 @@ export function AssessmentRunner({ assessment, classId }: { assessment: Assessme
               <span className="font-jetbrains-mono font-bold text-trace-teal bg-trace-teal/10 w-8 h-8 flex items-center justify-center rounded-full shrink-0">
                 {index + 1}
               </span>
-              <CardTitle className="text-lg font-inter text-white leading-relaxed">
-                {q.questionText}
-              </CardTitle>
+              <div className="space-y-4 flex-1">
+                <CardTitle className="text-lg font-inter text-white leading-relaxed">
+                  {q.questionText}
+                </CardTitle>
+                {q.imageUrl && (
+                  <div className="relative max-w-full sm:max-w-md overflow-hidden rounded-lg border border-white/10 bg-black/30">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={q.imageUrl} 
+                      alt={`Ilustrasi Soal ${index + 1}`} 
+                      className="object-contain w-full max-h-64 bg-black/40"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="pl-16">

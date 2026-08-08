@@ -27,7 +27,8 @@ export async function getAssessmentWithQuestions(assessmentId: string) {
     id: questions.id,
     questionText: questions.questionText,
     questionType: questions.questionType,
-    options: questions.options
+    options: questions.options,
+    imageUrl: questions.imageUrl
   }).from(questions).where(eq(questions.assessmentId, assessmentId));
   
   return {
@@ -80,7 +81,7 @@ export async function submitAnswers(attemptId: string, answers: { questionId: st
   }
   
   // Calculate score (out of 100)
-  const score = Math.round((correctCount / allQuestions.length) * 100);
+  const score = allQuestions.length > 0 ? Math.round((correctCount / allQuestions.length) * 100) : 0;
   
   // Complete attempt
   await db.update(assessmentAttempts)
@@ -88,4 +89,149 @@ export async function submitAnswers(attemptId: string, answers: { questionId: st
     .where(eq(assessmentAttempts.id, attemptId));
     
   return { success: true, score };
+}
+
+export async function createAssessment(subchapterId: string, title: string, passingScore: number) {
+  try {
+    await requireRole(["teacher"]);
+    
+    if (!subchapterId) throw new Error("Subchapter ID wajib diisi");
+    if (!title) throw new Error("Judul asesmen wajib diisi");
+    
+    const newAssessment = await db.insert(assessments).values({
+      subchapterId,
+      title,
+      passingScore: passingScore || 70,
+    }).returning();
+    
+    return { success: true, assessmentId: newAssessment[0].id };
+  } catch (error: any) {
+    console.error("createAssessment error:", error);
+    return { error: error.message || "Gagal membuat asesmen" };
+  }
+}
+
+export async function updateAssessment(assessmentId: string, title: string, passingScore: number) {
+  try {
+    await requireRole(["teacher"]);
+    
+    if (!assessmentId) throw new Error("Assessment ID wajib diisi");
+    if (!title) throw new Error("Judul asesmen wajib diisi");
+    
+    await db.update(assessments)
+      .set({
+        title,
+        passingScore: passingScore || 70,
+      })
+      .where(eq(assessments.id, assessmentId));
+      
+    return { success: true };
+  } catch (error: any) {
+    console.error("updateAssessment error:", error);
+    return { error: error.message || "Gagal memperbarui asesmen" };
+  }
+}
+
+export async function createQuestion(
+  assessmentId: string,
+  questionText: string,
+  questionType: string,
+  options: any,
+  correctAnswer: string,
+  imageUrl: string | null
+) {
+  try {
+    await requireRole(["teacher"]);
+    
+    if (!assessmentId) throw new Error("Assessment ID wajib diisi");
+    if (!questionText) throw new Error("Teks pertanyaan wajib diisi");
+    if (!questionType) throw new Error("Tipe pertanyaan wajib diisi");
+    if (correctAnswer === undefined || correctAnswer === null || correctAnswer === "") {
+      throw new Error("Kunci jawaban wajib diisi");
+    }
+    
+    const newQuestion = await db.insert(questions).values({
+      assessmentId,
+      questionText,
+      questionType,
+      options: options || null,
+      correctAnswer,
+      imageUrl,
+    }).returning();
+    
+    return { success: true, questionId: newQuestion[0].id };
+  } catch (error: any) {
+    console.error("createQuestion error:", error);
+    return { error: error.message || "Gagal membuat pertanyaan" };
+  }
+}
+
+export async function updateQuestion(
+  questionId: string,
+  questionText: string,
+  questionType: string,
+  options: any,
+  correctAnswer: string,
+  imageUrl: string | null
+) {
+  try {
+    await requireRole(["teacher"]);
+    
+    if (!questionId) throw new Error("Question ID wajib diisi");
+    if (!questionText) throw new Error("Teks pertanyaan wajib diisi");
+    if (!questionType) throw new Error("Tipe pertanyaan wajib diisi");
+    if (correctAnswer === undefined || correctAnswer === null || correctAnswer === "") {
+      throw new Error("Kunci jawaban wajib diisi");
+    }
+    
+    await db.update(questions)
+      .set({
+        questionText,
+        questionType,
+        options: options || null,
+        correctAnswer,
+        imageUrl,
+      })
+      .where(eq(questions.id, questionId));
+      
+    return { success: true };
+  } catch (error: any) {
+    console.error("updateQuestion error:", error);
+    return { error: error.message || "Gagal memperbarui pertanyaan" };
+  }
+}
+
+export async function deleteQuestion(questionId: string) {
+  try {
+    await requireRole(["teacher"]);
+    
+    if (!questionId) throw new Error("Question ID wajib diisi");
+    
+    await db.delete(questions).where(eq(questions.id, questionId));
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("deleteQuestion error:", error);
+    return { error: error.message || "Gagal menghapus pertanyaan" };
+  }
+}
+
+export async function getQuestionsForTeacher(assessmentId: string) {
+  await requireRole(["teacher"]);
+  
+  if (!assessmentId) throw new Error("Assessment ID wajib diisi");
+  
+  return db.select().from(questions).where(eq(questions.assessmentId, assessmentId));
+}
+
+export async function getAssessmentsWithQuestionCount() {
+  await requireRole(["teacher"]);
+  
+  const allAssessments = await db.select().from(assessments);
+  const allQuestions = await db.select({ id: questions.id, assessmentId: questions.assessmentId }).from(questions);
+  
+  return allAssessments.map(a => ({
+    ...a,
+    questionCount: allQuestions.filter(q => q.assessmentId === a.id).length
+  }));
 }

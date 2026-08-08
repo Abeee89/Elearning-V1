@@ -1,0 +1,98 @@
+# Implementation Plan - Teacher Module: Create Assessment Questions
+
+This plan outlines the design and implementation of assessment question creation, editing, and image upload functionality for the teacher's dashboard.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Database Schema Update**: We will add a nullable `image_url` column to the `questions` table. If the environment restricts database migration commands from the agent shell, we will execute a raw SQL query `ALTER TABLE questions ADD COLUMN IF NOT EXISTS image_url TEXT;` through a temporary Next.js server runner to apply it successfully.
+
+> [!NOTE]
+> **Storage for Uploads**: Question images will be uploaded and stored locally in the `public/uploads/` directory of the application server. This is self-contained and avoids external cloud storage dependencies.
+
+## Proposed Changes
+
+We will group the changes into: schema modification, server actions, api routes, and UI page additions.
+
+---
+
+### Database Skema
+
+#### [MODIFY] [schema.ts](file:///c:/Semester/version%20Skripsi/v1/src/db/schema.ts)
+- Add `imageUrl: text('image_url')` to the `questions` table definition:
+```typescript
+export const questions = pgTable('questions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  assessmentId: uuid('assessment_id').notNull().references(() => assessments.id),
+  questionText: text('question_text').notNull(),
+  questionType: varchar('question_type', { length: 30 }).notNull(), // 'multiple_choice' | 'true_false' | 'essay'
+  options: jsonb('options'),
+  correctAnswer: varchar('correct_answer', { length: 255 }).notNull(),
+  imageUrl: text('image_url'),
+});
+```
+
+---
+
+### Server Actions & API Routes
+
+#### [MODIFY] [assessments.ts](file:///c:/Semester/version%20Skripsi/v1/src/actions/assessments.ts)
+- Update `getAssessmentWithQuestions` to include `imageUrl: questions.imageUrl` in the returned fields so students can view question images.
+- Add teacher server actions (requires `requireRole(["teacher"])` validation):
+  - `createAssessment(subchapterId: string, title: string, passingScore: number)`
+  - `updateAssessment(assessmentId: string, title: string, passingScore: number)`
+  - `createQuestion(assessmentId: string, questionText: string, questionType: string, options: any, correctAnswer: string, imageUrl: string | null)`
+  - `updateQuestion(questionId: string, questionText: string, questionType: string, options: any, correctAnswer: string, imageUrl: string | null)`
+  - `deleteQuestion(questionId: string)`
+  - `getQuestionsForTeacher(assessmentId: string)`: fetches all question fields including `correctAnswer` and `imageUrl`.
+
+#### [NEW] [route.ts](file:///c:/Semester/version%20Skripsi/v1/src/app/api/upload/route.ts)
+- Add a POST route for image uploads.
+- Validates that the request comes from a teacher.
+- Saves the file to `public/uploads/[timestamp]_[filename]` and returns the URL `/uploads/[timestamp]_[filename]`.
+
+---
+
+### UI Components
+
+#### [MODIFY] [page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/dashboard/classes/%5BclassId%5D/page.tsx)
+- Add a "Kelola Asesmen" (Manage Assessments) button next to the class monitor header for teachers.
+
+#### [NEW] [page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/dashboard/classes/%5BclassId%5D/assessments/page.tsx)
+- The assessment list management page for teachers.
+- Lists all chapters and subchapters.
+- If a subchapter has an assessment, shows the title, passing score, question count, and actions: "Kelola Pertanyaan" (links to question manager) and "Ubah Asesmen" (opens settings form).
+- If no assessment exists, provides a "Buat Asesmen Baru" form to initialize one.
+
+#### [NEW] [page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/dashboard/classes/%5BclassId%5D/assessments/%5BassessmentId%5D/page.tsx)
+- The question manager page.
+- Lists current questions with text, type, options, answer key, and images.
+- Includes a clean editor form (Add/Edit mode toggle) with fields:
+  - Question Text
+  - Question Type (Multiple Choice / True-False)
+  - Options inputs (A, B, C, D)
+  - Answer Key selector
+  - Drag-and-drop or select file input for question image (uploads via `/api/upload` automatically and displays preview)
+- Deletion confirmation.
+
+#### [MODIFY] [AssessmentRunner.tsx](file:///c:/Semester/version%20Skripsi/v1/src/components/AssessmentRunner.tsx)
+- Render the question image above the options if `q.imageUrl` is present.
+- Support `imageUrl` in types.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Run `npm run build` to ensure typescript compilation passes without issues.
+
+### Manual Verification
+1. Register/Login as a Teacher.
+2. Go to Class Dashboard -> click "Kelola Asesmen".
+3. Create an assessment for a subchapter.
+4. Add multiple-choice and true-false questions, including image uploads for some questions.
+5. Check if images are displayed correctly in the question list.
+6. Register/Login as a Student.
+7. Go to Class -> click "Asesmen" -> take the assessment.
+8. Verify that question text, options, and images display perfectly.
+9. Answer the questions and verify that answers are validated correctly.

@@ -72,6 +72,7 @@ export const questions = pgTable('questions', {
   questionType: varchar('question_type', { length: 30 }).notNull(), // 'multiple_choice' | 'true_false' | 'essay'
   options: jsonb('options'),
   correctAnswer: varchar('correct_answer', { length: 255 }).notNull(),
+  imageUrl: text('image_url'),
 });
 
 // 9. assessment_attempts

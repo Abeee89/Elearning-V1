@@ -115,6 +115,12 @@ export default async function ClassDashboard(
            </div>
            
            <div className="flex items-center gap-4">
+             <Link href={`/dashboard/classes/${params.classId}/assessments`}>
+               <Button className="bg-trace-teal hover:bg-teal-600 text-black font-bold h-10 flex items-center">
+                 <PenTool className="w-4 h-4 mr-2" />
+                 Kelola Asesmen
+               </Button>
+             </Link>
              <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-lg flex items-center h-10">
                 <Users className="w-5 h-5 text-trace-teal mr-2" />
                 <span className="text-white font-jetbrains-mono">{studentProgress.length} Siswa</span>
