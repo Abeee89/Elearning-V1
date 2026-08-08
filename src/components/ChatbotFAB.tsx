@@ -73,7 +73,7 @@ export function ChatbotFAB() {
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[500px] bg-black/90 border border-trace-teal/30 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden backdrop-blur-md">
+        <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[500px] bg-black/90 border border-trace-teal/30 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden backdrop-blur-md animate-slide-up">
           {/* Header */}
           <div className="bg-trace-teal/10 p-4 border-b border-trace-teal/20 flex items-center">
              <Bot className="w-6 h-6 text-trace-teal mr-3" />
@@ -106,9 +106,15 @@ export function ChatbotFAB() {
             
             {isLoading && (
               <div className="flex justify-start">
-                <div className="max-w-[85%] p-3 rounded-2xl bg-white/10 text-white rounded-bl-none border border-white/5 flex items-center">
-                  <Loader2 className="w-4 h-4 animate-spin text-trace-teal mr-2" />
-                  <span className="text-sm">Mengetik...</span>
+                <div className="max-w-[85%] p-3 rounded-2xl bg-white/10 text-white rounded-bl-none border border-white/5 flex flex-col gap-2">
+                  <div className="flex items-center gap-1.5 text-[10px] text-trace-teal font-jetbrains-mono uppercase tracking-wider">
+                    <span>AI Assistant</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-trace-teal animate-pulse"></span>
+                  </div>
+                  {/* Short pulsing segment using the trace-line motif */}
+                  <div className="h-1 w-16 bg-white/10 rounded overflow-hidden relative">
+                    <div className="absolute top-0 bottom-0 left-0 w-8 bg-trace-teal rounded shadow-[0_0_8px_#4FD1C5] animate-[trace-pulse_1.5s_infinite_ease-in-out]"></div>
+                  </div>
                 </div>
               </div>
             )}

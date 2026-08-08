@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
+  --font-jetbrains-mono: var(--font-jetbrains-mono);
   --font-heading: var(--font-space-grotesk);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -161,7 +162,128 @@
   100% { filter: brightness(1); }
 }
 
+@keyframes trace-pulse {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
 @keyframes overheat {
   0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
   50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.7); }
+}
+
+/* ─── Premium UI/UX Additions ─── */
+
+/* Technical Instrument Font & Styling */
+.font-instrument {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+
+/* Blueprint / Oscilloscope Schematic Grid Background */
+.bg-schematic-grid {
+  background-image:
+    linear-gradient(to right, rgba(79, 209, 197, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(79, 209, 197, 0.02) 1px, transparent 1px),
+    linear-gradient(to right, rgba(79, 209, 197, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(79, 209, 197, 0.06) 1px, transparent 1px);
+  background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
+}
+
+/* Navbar active item animated trace line */
+.trace-under {
+  position: relative;
+}
+.trace-under::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #4FD1C5; /* var(--color-trace-teal) */
+  box-shadow: 0 0 8px rgba(79, 209, 197, 0.8), 0 0 15px rgba(79, 209, 197, 0.4);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.trace-under-active::after {
+  transform: scaleX(1);
+}
+
+/* Subchapter Card / Panel animated trace border */
+.trace-border {
+  position: relative;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Subtle trace elements inside cards */
+.trace-card-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 0;
+  background-color: #4FD1C5;
+  box-shadow: 0 0 8px #4FD1C5;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.trace-border:hover .trace-card-accent,
+.trace-border-active .trace-card-accent {
+  width: 100%;
+}
+
+/* Keyboard accessibility - Visible Focus Rings */
+*:focus-visible {
+  outline: 2px solid #4FD1C5 !important;
+  outline-offset: 2px !important;
+}
+
+/* Smooth Drawer Slide Up */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* prefers-reduced-motion overrides */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+  
+  .trace-under::after {
+    transition: none !important;
+    transform: scaleX(1) !important;
+    display: block !important;
+    box-shadow: none !important;
+  }
+  
+  .trace-card-accent {
+    width: 100% !important;
+    transition: none !important;
+    box-shadow: none !important;
+  }
+  
+  .animate-pulse, .animate-spin, .animate-ping, .animate-slide-up, .animate-slide-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

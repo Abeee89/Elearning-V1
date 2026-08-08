@@ -13,6 +13,9 @@ export async function updateLearningProgress(subchapterId: string, status: "not_
   );
   
   if (existing.length > 0) {
+    if (existing[0].status === "completed" && status === "in_progress") {
+      return { success: true };
+    }
     await db.update(learningProgress).set({
       status,
       completedAt: status === "completed" ? new Date() : existing[0].completedAt
@@ -72,4 +75,19 @@ export async function getClassProgressOverview(classId: string) {
       percentage
     };
   });
+}
+
+export async function getStudentProgress() {
+  try {
+    const user = await requireRole(["student"]);
+    return db.select({
+      subchapterId: learningProgress.subchapterId,
+      status: learningProgress.status,
+      completedAt: learningProgress.completedAt
+    })
+    .from(learningProgress)
+    .where(eq(learningProgress.studentId, user.id));
+  } catch (e) {
+    return [];
+  }
 }

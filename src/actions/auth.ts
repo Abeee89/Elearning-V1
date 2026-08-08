@@ -4,8 +4,12 @@ import { hash } from "bcryptjs";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { signIn, auth } from "@/auth";
+import { signIn, auth, signOut } from "@/auth";
 import { AuthError } from "next-auth";
+
+export async function logoutUser() {
+  await signOut({ redirectTo: "/login" });
+}
 
 export async function registerUser(formData: FormData) {
   try {

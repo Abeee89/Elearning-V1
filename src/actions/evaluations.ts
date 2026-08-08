@@ -82,3 +82,16 @@ export async function generateEvaluation() {
     return { error: "Gagal menghasilkan evaluasi AI saat ini." };
   }
 }
+
+export async function checkCanGenerateEvaluation(): Promise<boolean> {
+  try {
+    const user = await requireRole(["student"]);
+    const attempts = await db.select({ id: assessmentAttempts.id })
+      .from(assessmentAttempts)
+      .where(eq(assessmentAttempts.studentId, user.id))
+      .limit(1);
+    return attempts.length > 0;
+  } catch (e) {
+    return false;
+  }
+}

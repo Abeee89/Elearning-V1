@@ -1,0 +1,108 @@
+# Implementation Plan: UI/UX Enhancements for Electrical Engineering E-Learning
+
+This plan describes the proposed UI and UX enhancements for the platform to make it feel like a professional, modern, and interactive technical instrument. The enhancements are derived from the instructions in [AGENTS-UI.agent](file:///c:/Semester/version%20Skripsi/v1/.agents/workflow/AGENTS-UI.agent) and [web-design-guidelines](file:///c:/Semester/version%20Skripsi/v1/.agents/skills/web-design-guidelines/SKILL.md).
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> - **Persistent Global Navbar:** We will introduce a shared, responsive top navbar across all authenticated pages (`/dashboard`, `/materi`, `/simulasi`, `/asesmen`, `/evaluasi`). This replaces the current scattered headers, providing a unified navigation experience.
+> - **Trace Line Border Effect:** We will implement the custom border-drawing and underline animations representing PCB traces using CSS keyframes and transitions.
+> - **Collapsible Subchapter Navigation Sidebar:** We will add a sidebar for lesson pages to let students switch between subchapters quickly, visualising status dots (not started, in progress, completed) mapped to their database progress.
+> - **Instrument Readout Formatting:** We will standardize all voltage, current, resistance, and score values across all screens to use monospace typography (`font-mono` / JetBrains Mono) so they feel like technical instruments.
+
+---
+
+## Open Questions
+
+> [!NOTE]
+> - For `/kelas` route: `AGENTS-UI.agent` mentions `/kelas` in the Next.js routes map. Currently, the dashboard lists enrolled classes and lets students enter class detail pages directly under `/dashboard/classes/[classId]`. Should the Navbar link to `/dashboard` as the home of enrolled classes, or should it go to a separate `/dashboard` path? (We will use `/dashboard` as the base target for the role-based dashboard/classes).
+
+---
+
+## Proposed Changes
+
+We will group our modifications into three logical layers: Styling Foundation, Navigation & Structure, and Typography/Aesthetics.
+
+---
+
+### 1. Styling Foundation
+
+#### [MODIFY] [globals.css](file:///c:/Semester/version%20Skripsi/v1/src/app/globals.css)
+- Update standard page backgrounds from `bg-black/95` to `--bg-base` (`#0E1A24`) or the custom `bg-bg-base` utility.
+- Add `.bg-schematic-grid` background grid line helper representing a blueprints/circuit schematic sheet utilizing `--grid-line` (#25404D).
+- Implement custom PCB trace-line animations:
+  - Underline tracer for active Navbar tabs.
+  - Border tracer for active/hovered cards (drawing itself around the card edges).
+- Add accessibility focus styles: override default outline rings with custom trace-teal rings (`focus-visible:ring-2 focus-visible:ring-trace-teal outline-none`).
+- Implement the `prefers-reduced-motion` media queries to disable animations and transition-all in favor of simple opacity/color crossfades.
+
+---
+
+### 2. Navigation & Structure
+
+#### [NEW] [Navbar.tsx](file:///c:/Semester/version%20Skripsi/v1/src/components/Navbar.tsx)
+- Build a responsive global Navbar component according to `AGENTS-UI.agent` section 2:
+  - **Left:** Branding `KelistrikanPro` with a glowing teal bolt/zap icon.
+  - **Center Links:** `Materi`, `Simulasi`, `Asesmen`, `Evaluasi` (locked with a locked tooltip "Selesaikan 1 asesmen untuk membuka fitur ini" if the student has 0 completed attempts).
+  - **Right:** Role-specific link (`Kelas Saya` / `Dashboard Kelas` linking to `/dashboard`) + Account details dropdown + Logout button.
+- Integrate the animated trace-line which draws itself under the active page link.
+
+#### [MODIFY] [layout.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/layout.tsx)
+- Integrate session retrieval or check if we should supply the navbar.
+- *Wait, instead of placing it in root layout which would render it on `/login`, `/register`, and `/` landing page, we will import it directly onto the top-level pages of the authenticated modules.*
+
+#### [MODIFY] [dashboard/page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/dashboard/page.tsx)
+- Integrate `<Navbar>` at the top. Remove duplicate logout buttons and raw welcome layouts to present a cleaner, dashboard panel.
+- Update background classes to `bg-bg-base`.
+
+#### [MODIFY] [dashboard/classes/[classId]/page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/dashboard/classes/[classId]/page.tsx)
+- Integrate `<Navbar>` at the top. Update background classes to `bg-bg-base`.
+
+#### [MODIFY] [materi/page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/materi/page.tsx)
+- Integrate `<Navbar>` at the top. Wrap page content in schematic grid classes and use the pcb card hover border draw effect.
+
+#### [MODIFY] [materi/[chapterId]/[subchapterId]/page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/materi/[chapterId]/[subchapterId]/page.tsx)
+- Integrate `<Navbar>` at the top.
+- Introduce a grid layout: left-side collapsible `SubchapterSidebar` (persistent on desktop, collapsible on mobile) showing chapter sibling subchapters, and right-side `LessonViewer`.
+- Include progress status dots (gray/warning/teal) beside subchapters in the sidebar.
+
+#### [MODIFY] [simulasi/page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/simulasi/page.tsx)
+- Integrate `<Navbar>` at the top. Add decorative schematic blueprint backgrounds.
+
+#### [MODIFY] [asesmen/page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/asesmen/page.tsx)
+- Integrate `<Navbar>` at the top. Update styling to match.
+
+#### [MODIFY] [evaluasi/page.tsx](file:///c:/Semester/version%20Skripsi/v1/src/app/evaluasi/page.tsx)
+- Integrate `<Navbar>` at the top. Update styling.
+
+---
+
+### 3. Typography & Aesthetic Audits
+
+#### [MODIFY] [OhmsLawVisualizer.tsx](file:///c:/Semester/version%20Skripsi/v1/src/components/simulasi/OhmsLawVisualizer.tsx)
+- Verify and apply monospace font (`font-mono`) styling on voltage (V), resistance (R), and current (A) display blocks.
+- Ensure the particle simulation runs smoothly on all screen widths.
+
+#### [MODIFY] [ResistorCalculatorWidget.tsx](file:///c:/Semester/version%20Skripsi/v1/src/components/ResistorCalculatorWidget.tsx)
+- Verify and apply monospace typography to all ohms (Ω), tolerance percentage (%), and numeric values.
+
+#### [MODIFY] [ChatbotFAB.tsx](file:///c:/Semester/version%20Skripsi/v1/src/components/ChatbotFAB.tsx)
+- Enhance sliding transition when chatbot is toggled.
+- Implement the custom pulsing trace-line typing indicator when AI is generating responses, instead of generic bouncing dots.
+- Ensure chatbot fits properly on small mobile viewport dimensions (down to 360px).
+
+---
+
+## Verification Plan
+
+### Automated Verification
+- Run compilation checks (`npm run build` or `next lint`) to ensure TypeScript and linter compiler compliance.
+- Confirm all modules and server action bindings function correctly.
+
+### Manual Verification & QC Inspection
+- **Aesthetic Wow Factor:** Ensure the deep circuit-board background (`#0E1A24`) paired with glowing teal trace borders gives the application a technical, high-quality instrument feel.
+- **Responsive Layouts:** Test layout widths down to 360px on mobile simulation modes to verify layout wrap.
+- **Keyboard Tab Order & Focus:** Tab through the entire Navbar and interactive sliders/buttons to ensure focus rings (`outline-trace-teal`) are clearly visible.
+- **Accessibility Verification:** Turn on prefers-reduced-motion to confirm all transitions crossfade instantly without scrolling, border-draws, or glowing pulses.
